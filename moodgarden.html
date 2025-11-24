@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mood Garden - Modern Artistry</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Added Dancing Script back for the button -->
     <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=ZCOOL+KuaiLe&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -183,6 +184,7 @@
                 <div class="w-full relative z-20 mt-1 flex flex-col items-center justify-center pointer-events-none">
                     <div class="flex flex-col items-center">
                         <h1 class="text-2xl app-title">Mood Garden</h1>
+                        <!-- Updated text size: text-[11px] -->
                         <p class="text-[11px] text-[#8e8e93] font-sans tracking-[0.25em] mt-1 uppercase font-medium">How are you feeling?</p>
                     </div>
                 </div>
@@ -212,6 +214,7 @@
                     <div class="w-full flex justify-center">
                         <button id="bloomBtn" class="pointer-events-auto relative group overflow-hidden px-12 py-4 rounded-full transition-all duration-500 cursor-pointer hover:-translate-y-1 shadow-[0_15px_30px_-8px_rgba(212,165,165,0.4)] bg-[#fffcfc] border border-[#f0eaea]">
                             <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-[#fdfbfb] to-[#ebedee] opacity-50"></div>
+                            <!-- 按钮文字也应用油画渐变 -->
                             <span class="relative font-['Dancing_Script'] text-[26px] font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-[#556b8d] via-[#bd7b7b] to-[#c4a463] transition-all group-hover:opacity-80">Mood Bloom</span>
                             <div class="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80"></div>
                         </button>
@@ -276,18 +279,7 @@
         </div>
     </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Firebase Config (Provided by Environment)
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mood-garden-v1';
-
+<script>
     // --- 现代莫奈配色 ---
     const COLORS = {
         sad: [138, 155, 168],    
@@ -311,8 +303,6 @@
     const now = new Date();
     const currentRealTime = now.getHours() + now.getMinutes() / 60;
 
-    let currentUser = null;
-
     let state = {
         moodPoints: [], 
         nowPoint: {
@@ -325,45 +315,13 @@
         showWave: false 
     };
     
+    // Layout updates
     const LAYOUT = {
         padTop: 20, 
         padBottom: 25, 
         padLeft: 28, 
         padRight: 15
     };
-
-    // --- Firebase Logic ---
-    async function initApp() {
-        try {
-            await signInAnonymously(auth);
-        } catch (error) {
-            console.error("Auth failed", error);
-        }
-    }
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            currentUser = user;
-            // Listen for data
-            const q = query(
-                collection(db, 'artifacts', appId, 'users', user.uid, 'moods')
-            );
-            
-            onSnapshot(q, (snapshot) => {
-                const points = [];
-                snapshot.forEach(doc => {
-                    points.push({ ...doc.data(), id: doc.id });
-                });
-                state.moodPoints = points;
-                // Sort for drawing
-                state.moodPoints.sort((a, b) => a.time - b.time);
-                
-                // Refresh View
-                drawGraph();
-                renderHistoryCalendar(); // Update history view if needed
-            });
-        }
-    });
 
     // --- 视图切换 ---
     historyBtn.addEventListener('click', () => {
@@ -387,37 +345,13 @@
         calendarGrid.innerHTML = '';
         const daysInMonth = 31;
         
-        // 使用真实数据聚合（简化版，只取最后一条作为当天心情）
-        const moodMap = {};
-        state.moodPoints.forEach(p => {
-            // 假设 timestamp 是 Date.now()
-            const d = new Date(p.id); // Using ID as timestamp for simplicity
-            const day = d.getDate();
-            moodMap[day] = p.mood;
-        });
-
         for (let i = 1; i <= daysInMonth; i++) {
             const cell = document.createElement('div');
             cell.className = 'day-cell';
             
-            // 这里为了展示效果，混合了随机数据和真实数据
-            // 如果有真实数据，优先显示
-            // 如果没有，保留原来的随机逻辑作为"Demo效果"
-            let hasData = Math.random() > 0.7; // Reduced random chance
-            let moodVal = Math.random();
-
-            // 实际逻辑应该这样（但为了演示保持美观，我们保留随机填补）
-            /*
-            if (moodMap[i] !== undefined) {
-                hasData = true;
-                moodVal = moodMap[i];
-            } else {
-                hasData = false; 
-            }
-            */
-            
-            if (hasData) {
-                const colorRGB = getSmoothedColor(moodVal).split(',');
+            if (Math.random() > 0.3) {
+                const randomMood = Math.random(); 
+                const colorRGB = getSmoothedColor(randomMood).split(',');
                 const colorCSS = `rgba(${colorRGB[0]}, ${colorRGB[1]}, ${colorRGB[2]}, 0.85)`; 
                 
                 const dot = document.createElement('div');
@@ -889,35 +823,94 @@
         const rawTime = ((x - LAYOUT.padLeft) / drawWidth) * 24;
         const rawMood = 1 - ((y - LAYOUT.padTop) / drawHeight);
 
-        // Database Interaction
-        if (currentUser) {
-            const point = {
-                time: Math.max(0, Math.min(24, rawTime)),
-                mood: Math.max(0, Math.min(1, rawMood)),
-                createdAt: new Date().toISOString()
-            };
-            addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'moods'), point);
-        }
+        state.currentPoint = {
+            time: Math.max(0, Math.min(24, rawTime)),
+            mood: Math.max(0, Math.min(1, rawMood)),
+            id: Date.now()
+        };
+        saveCurrentPoint(); 
+        drawGraph();
+        drawWatercolorFlower(state.currentPoint.mood);
     }
 
     function handleMouseUp() {
         if (state.nowPoint.isDragging) {
             state.nowPoint.isDragging = false;
             graphCanvas.style.cursor = 'grab';
-            
-            if (currentUser) {
-                 const point = {
-                    time: state.nowPoint.time,
-                    mood: state.nowPoint.mood,
-                    createdAt: new Date().toISOString()
-                };
-                addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'moods'), point);
-            }
+            state.currentPoint = {
+                time: state.nowPoint.time,
+                mood: state.nowPoint.mood,
+                id: Date.now()
+            };
+            saveCurrentPoint();
         }
     }
 
-    // Start App
-    initApp();
+    function saveCurrentPoint() {
+        if (!state.currentPoint) return;
+        const existingIndex = state.moodPoints.findIndex(p => Math.abs(p.time - state.currentPoint.time) < 0.2);
+        if (existingIndex !== -1) state.moodPoints[existingIndex] = state.currentPoint;
+        else state.moodPoints.push(state.currentPoint);
+        state.moodPoints.sort((a, b) => a.time - b.time);
+        state.showWave = false; 
+        drawGraph();
+    }
+
+    bloomBtn.addEventListener('click', () => {
+        if (state.moodPoints.length === 0) {
+            const p = { ...state.nowPoint, id: Date.now() };
+            state.moodPoints.push(p);
+        }
+        if (state.isAnimating) return;
+
+        state.isAnimating = true;
+        state.showWave = true; 
+        
+        const points = [...state.moodPoints];
+        if (points.length === 1) {
+            points.unshift({time: Math.max(0, points[0].time - 4), mood: 0.5});
+        }
+        points.sort((a,b) => a.time - b.time);
+
+        let startTime = null;
+        const durationPerSegment = 2000; 
+        
+        const animate = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const totalDuration = (points.length - 1) * durationPerSegment;
+            
+            if (elapsed >= totalDuration) {
+                state.isAnimating = false;
+                drawGraph(null); 
+                drawWatercolorFlower(state.nowPoint.mood); 
+                return;
+            }
+
+            const segmentIndex = Math.floor(elapsed / durationPerSegment);
+            const segmentProgress = (elapsed % durationPerSegment) / durationPerSegment;
+            const startP = points[segmentIndex];
+            const endP = points[segmentIndex + 1];
+            const easeT = segmentProgress < 0.5 
+                ? 2 * segmentProgress * segmentProgress 
+                : 1 - Math.pow(-2 * segmentProgress + 2, 2) / 2;
+
+            const currentMood = lerp(startP.mood, endP.mood, easeT);
+            const currentTime = lerp(startP.time, endP.time, segmentProgress);
+            
+            drawGraph(currentTime);
+            drawWatercolorFlower(currentMood);
+            requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    });
+
+    graphCanvas.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    graphCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleMouseDown(e); }, {passive: false});
+    graphCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMouseMove(e); }, {passive: false});
+    window.addEventListener('touchend', (e) => { handleMouseUp(); }, {passive: false});
 
     const resizeObs = new ResizeObserver(() => { setTimeout(resizeCanvas, 100); });
     resizeObs.observe(mainView);
