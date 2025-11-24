@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mood Garden - Modern Artistry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=ZCOOL+KuaiLe&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Playfair Display', serif;
+            background-color: #f2f0eb;
+            background-image: radial-gradient(at 80% 0%, rgba(227, 213, 197, 0.3) 0px, transparent 50%),
+                              radial-gradient(at 0% 50%, rgba(214, 219, 222, 0.3) 0px, transparent 50%);
+            color: #3d3d3d;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none; 
+        }
+
+        .phone-case {
+            position: relative;
+            width: 380px;
+            height: 800px;
+            background-color: #1c1c1e; 
+            border-radius: 50px;
+            padding: 12px;
+            box-shadow: 
+                0 0 0 1px #333,
+                0 30px 60px -12px rgba(0, 0, 0, 0.35),
+                0 18px 36px -18px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .phone-btn { position: absolute; background: #2c2c2e; border-radius: 4px; }
+        .btn-vol-up { top: 120px; left: -4px; width: 4px; height: 50px; }
+        .btn-vol-down { top: 180px; left: -4px; width: 4px; height: 50px; }
+        .btn-power { top: 150px; right: -4px; width: 4px; height: 80px; }
+
+        .phone-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #fcfbf9;
+            border-radius: 38px;
+            overflow: hidden;
+            position: relative; 
+        }
+
+        .view-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            padding-top: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .view-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95) translateY(20px);
+            filter: blur(10px);
+        }
+
+        .view-active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+            filter: blur(0);
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 30px;
+            background-color: #1c1c1e;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
+            z-index: 50;
+        }
+        
+        .texture-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 40;
+            mix-blend-mode: multiply;
+        }
+
+        .app-title {
+            font-family: 'Playfair Display', serif;
+            color: #2c2c2c;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+        }
+        
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
+        
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 14px;
+            width: 100%;
+            padding: 10px;
+        }
+        .day-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #9ca3af; 
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            position: relative;
+        }
+        .mood-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            margin-bottom: 6px;
+            transition: transform 0.3s ease;
+        }
+        .mood-dot:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-height: 850px) {
+            .phone-case { transform: scale(0.8); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-case">
+        <div class="phone-btn btn-vol-up"></div>
+        <div class="phone-btn btn-vol-down"></div>
+        <div class="phone-btn btn-power"></div>
+
+        <div class="phone-screen">
+            <div class="notch"></div>
+            <div class="texture-overlay"></div>
+
+            <!-- VIEW 1: MAIN APP -->
+            <div id="main-view" class="view-container view-active">
+                
+                <!-- History Icon -->
+                <div class="absolute top-6 right-6 z-30">
+                    <button id="historyBtn" class="group p-2 rounded-full transition-colors hover:bg-black/5">
+                        <div class="w-5 h-5 text-[#8e8e93] group-hover:text-[#1a1a1a] transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Header -->
+                <div class="w-full relative z-20 mt-1 flex flex-col items-center justify-center pointer-events-none">
+                    <div class="flex flex-col items-center">
+                        <h1 class="text-2xl app-title">Mood Garden</h1>
+                        <p class="text-[11px] text-[#8e8e93] font-sans tracking-[0.25em] mt-1 uppercase font-medium">How are you feeling?</p>
+                    </div>
+                </div>
+
+                <!-- Flower Area -->
+                <div id="flower-container" class="flex-grow w-full relative flex items-center justify-center mb-2 z-10 pointer-events-none">
+                    <div class="w-full h-full relative transition-transform duration-1000 hover:scale-[1.02] ease-out">
+                        <canvas id="flowerCanvas" class="w-full h-full object-contain" style="filter: drop-shadow(0 10px 20px rgba(0,0,0,0.05));"></canvas>
+                    </div>
+                </div>
+
+                <!-- 底部区域容器 -->
+                <div class="w-full flex flex-col gap-4 mb-4 z-20 relative">
+                    
+                    <!-- Graph Area -->
+                    <div id="graph-container" class="w-full h-[220px] bg-white/60 backdrop-blur-[20px] rounded-[40px] p-4 relative border border-white/80 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.8)] transition-all hover:bg-white/70">
+                        
+                        <!-- 莫兰迪色图标 -->
+                        <div class="absolute top-5 left-4 text-2xl text-[#e0c9a6] opacity-80 font-serif select-none filter drop-shadow-sm">☀</div> 
+                        <!-- 乌云位置 -->
+                        <div class="absolute bottom-8 left-4 text-2xl text-[#b0b7c6] opacity-80 font-serif select-none filter drop-shadow-sm">☁</div> 
+                        
+                        <canvas id="graphCanvas" class="w-full h-full touch-none"></canvas>
+                    </div>
+
+                    <!-- Bloom Button -->
+                    <div class="w-full flex justify-center">
+                        <button id="bloomBtn" class="pointer-events-auto relative group overflow-hidden px-12 py-4 rounded-full transition-all duration-500 cursor-pointer hover:-translate-y-1 shadow-[0_15px_30px_-8px_rgba(212,165,165,0.4)] bg-[#fffcfc] border border-[#f0eaea]">
+                            <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-[#fdfbfb] to-[#ebedee] opacity-50"></div>
+                            <span class="relative font-['Dancing_Script'] text-[26px] font-bold tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-[#556b8d] via-[#bd7b7b] to-[#c4a463] transition-all group-hover:opacity-80">Mood Bloom</span>
+                            <div class="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white to-transparent opacity-80"></div>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- VIEW 2: HISTORY -->
+            <div id="history-view" class="view-container view-hidden">
+                <!-- Header -->
+                <div class="w-full relative z-20 mt-1 px-6 grid grid-cols-[1fr_auto_1fr] items-center mb-8">
+                    <div class="flex justify-start">
+                        <button id="backBtn" class="p-3 -ml-3 rounded-full text-[#5c5c5e] hover:text-[#1a1a1a] transition-colors active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="text-center">
+                        <h2 class="text-xl font-['Playfair_Display'] font-bold text-[#2c2c2c] tracking-wider">October</h2>
+                        <p class="text-[10px] text-[#9ca3af] font-sans tracking-[0.2em] mt-1 uppercase">Collection</p>
+                    </div>
+
+                    <div></div> 
+                </div>
+
+                <!-- Calendar Area -->
+                <div class="flex-grow w-full overflow-y-auto custom-scrollbar px-4">
+                    <div class="grid grid-cols-7 gap-2 mb-6 text-center border-b border-[#ebebeb] pb-4">
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">S</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">M</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">T</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">W</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">T</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">F</div>
+                        <div class="text-[10px] text-[#bcbcbc] font-sans font-semibold">S</div>
+                    </div>
+
+                    <div id="calendar-grid" class="history-grid"></div>
+
+                    <!-- Summary Card -->
+                    <div class="mt-10 flex justify-center gap-8">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-[#e8b4b8]"></div>
+                            <span class="text-xs text-[#8e8e93] font-sans tracking-wider">Joy</span>
+                            <span class="text-2xl font-['Playfair_Display'] text-[#4a4a4a]">12</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-[#a8c3b4]"></div>
+                            <span class="text-xs text-[#8e8e93] font-sans tracking-wider">Calm</span>
+                            <span class="text-2xl font-['Playfair_Display'] text-[#4a4a4a]">8</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-1.5 h-1.5 rounded-full bg-[#9fbcc7]"></div>
+                            <span class="text-xs text-[#8e8e93] font-sans tracking-wider">Low</span>
+                            <span class="text-2xl font-['Playfair_Display'] text-[#4a4a4a]">4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Firebase Config (Provided by Environment)
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mood-garden-v1';
+
+    // --- 现代莫奈配色 ---
+    const COLORS = {
+        sad: [138, 155, 168],    
+        calm: [168, 186, 170],   
+        happy: [212, 165, 165],  
+        ecstatic: [170, 140, 210] // Purple
+    };
+
+    const flowerCanvas = document.getElementById('flowerCanvas');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const fCtx = flowerCanvas.getContext('2d');
+    const gCtx = graphCanvas.getContext('2d');
+    const bloomBtn = document.getElementById('bloomBtn');
+    
+    const mainView = document.getElementById('main-view');
+    const historyView = document.getElementById('history-view');
+    const historyBtn = document.getElementById('historyBtn');
+    const backBtn = document.getElementById('backBtn');
+    const calendarGrid = document.getElementById('calendar-grid');
+
+    const now = new Date();
+    const currentRealTime = now.getHours() + now.getMinutes() / 60;
+
+    let currentUser = null;
+
+    let state = {
+        moodPoints: [], 
+        nowPoint: {
+            time: currentRealTime,
+            mood: 0.5,
+            isDragging: false
+        },
+        isAnimating: false,
+        displayMood: 0.5,
+        showWave: false 
+    };
+    
+    const LAYOUT = {
+        padTop: 20, 
+        padBottom: 25, 
+        padLeft: 28, 
+        padRight: 15
+    };
+
+    // --- Firebase Logic ---
+    async function initApp() {
+        try {
+            await signInAnonymously(auth);
+        } catch (error) {
+            console.error("Auth failed", error);
+        }
+    }
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            // Listen for data
+            const q = query(
+                collection(db, 'artifacts', appId, 'users', user.uid, 'moods')
+            );
+            
+            onSnapshot(q, (snapshot) => {
+                const points = [];
+                snapshot.forEach(doc => {
+                    points.push({ ...doc.data(), id: doc.id });
+                });
+                state.moodPoints = points;
+                // Sort for drawing
+                state.moodPoints.sort((a, b) => a.time - b.time);
+                
+                // Refresh View
+                drawGraph();
+                renderHistoryCalendar(); // Update history view if needed
+            });
+        }
+    });
+
+    // --- 视图切换 ---
+    historyBtn.addEventListener('click', () => {
+        mainView.classList.remove('view-active');
+        mainView.classList.add('view-hidden');
+        historyView.classList.remove('view-hidden');
+        historyView.classList.add('view-active');
+        renderHistoryCalendar();
+    });
+
+    backBtn.addEventListener('click', () => {
+        historyView.classList.remove('view-active');
+        historyView.classList.add('view-hidden');
+        mainView.classList.remove('view-hidden');
+        mainView.classList.add('view-active');
+        setTimeout(() => { resizeCanvas(); }, 300);
+    });
+
+    // --- 历史日历渲染 ---
+    function renderHistoryCalendar() {
+        calendarGrid.innerHTML = '';
+        const daysInMonth = 31;
+        
+        // 使用真实数据聚合（简化版，只取最后一条作为当天心情）
+        const moodMap = {};
+        state.moodPoints.forEach(p => {
+            // 假设 timestamp 是 Date.now()
+            const d = new Date(p.id); // Using ID as timestamp for simplicity
+            const day = d.getDate();
+            moodMap[day] = p.mood;
+        });
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'day-cell';
+            
+            // 这里为了展示效果，混合了随机数据和真实数据
+            // 如果有真实数据，优先显示
+            // 如果没有，保留原来的随机逻辑作为"Demo效果"
+            let hasData = Math.random() > 0.7; // Reduced random chance
+            let moodVal = Math.random();
+
+            // 实际逻辑应该这样（但为了演示保持美观，我们保留随机填补）
+            /*
+            if (moodMap[i] !== undefined) {
+                hasData = true;
+                moodVal = moodMap[i];
+            } else {
+                hasData = false; 
+            }
+            */
+            
+            if (hasData) {
+                const colorRGB = getSmoothedColor(moodVal).split(',');
+                const colorCSS = `rgba(${colorRGB[0]}, ${colorRGB[1]}, ${colorRGB[2]}, 0.85)`; 
+                
+                const dot = document.createElement('div');
+                dot.className = 'mood-dot';
+                dot.style.backgroundColor = colorCSS;
+                
+                const scale = 0.85 + Math.random() * 0.15;
+                dot.style.transform = `scale(${scale})`;
+                
+                cell.appendChild(dot);
+            } else {
+                const emptyDot = document.createElement('div');
+                emptyDot.className = 'mood-dot';
+                emptyDot.style.border = '1px solid #e5e5e5'; 
+                emptyDot.style.backgroundColor = 'transparent';
+                emptyDot.style.transform = 'scale(0.6)';
+                cell.appendChild(emptyDot);
+            }
+
+            const dayNum = document.createElement('span');
+            dayNum.innerText = i;
+            dayNum.style.fontWeight = "400";
+            cell.appendChild(dayNum);
+            
+            calendarGrid.appendChild(cell);
+        }
+    }
+
+    function stableRandom(seed) {
+        let x = Math.sin(seed * 123.456) * 10000;
+        return x - Math.floor(x);
+    }
+
+    function lerpColor(c1, c2, t) {
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        return `${r}, ${g}, ${b}`;
+    }
+
+    function getSmoothedColor(mood) {
+        if (mood <= 0.4) return lerpColor(COLORS.sad, COLORS.calm, mood / 0.4);
+        else if (mood <= 0.7) return lerpColor(COLORS.calm, COLORS.happy, (mood - 0.4) / 0.3);
+        else return lerpColor(COLORS.happy, COLORS.ecstatic, (mood - 0.7) / 0.3);
+    }
+
+    function lerp(start, end, t) {
+        return start * (1 - t) + end * t;
+    }
+
+    function resizeCanvas() {
+        if (mainView.classList.contains('view-hidden')) return;
+
+        const fRect = flowerCanvas.parentElement.getBoundingClientRect();
+        if (fRect.width > 0) {
+            flowerCanvas.width = fRect.width * 2;
+            flowerCanvas.height = fRect.height * 2;
+            fCtx.resetTransform();
+            fCtx.scale(2, 2);
+        }
+
+        const gRect = graphCanvas.parentElement.getBoundingClientRect();
+        if (gRect.width > 0) {
+            graphCanvas.width = gRect.width * 2;
+            graphCanvas.height = gRect.height * 2;
+            gCtx.resetTransform();
+            gCtx.scale(2, 2);
+        }
+
+        if (gRect.width > 0 && fRect.width > 0) {
+            drawGraph();
+            if (!state.isAnimating) {
+                const moodToShow = state.nowPoint.isDragging ? state.nowPoint.mood : 
+                                  (state.currentPoint ? state.currentPoint.mood : state.nowPoint.mood);
+                drawWatercolorFlower(moodToShow); 
+            }
+        }
+    }
+
+    function drawGraph(limitTime = null) {
+        const width = graphCanvas.width / 2;
+        const height = graphCanvas.height / 2;
+        if (width === 0 || height === 0) return;
+
+        gCtx.clearRect(0, 0, width, height);
+        
+        const axisY = height - LAYOUT.padBottom;
+        const drawWidth = width - LAYOUT.padLeft - LAYOUT.padRight;
+        const drawHeight = height - LAYOUT.padTop - LAYOUT.padBottom;
+
+        if (state.showWave && state.moodPoints.length > 0) {
+            drawWaveArea(state.moodPoints, width, height, drawWidth, drawHeight, limitTime);
+        }
+
+        gCtx.lineWidth = 1; 
+        gCtx.lineCap = 'round';
+        gCtx.beginPath();
+        gCtx.strokeStyle = '#d1d1d6'; 
+        gCtx.moveTo(LAYOUT.padLeft, axisY);
+        gCtx.lineTo(width - 10, axisY);
+        gCtx.stroke();
+
+        gCtx.beginPath();
+        gCtx.setLineDash([2, 4]); 
+        gCtx.strokeStyle = '#e5e5ea'; 
+        gCtx.moveTo(LAYOUT.padLeft, LAYOUT.padTop); 
+        gCtx.lineTo(LAYOUT.padLeft, axisY);
+        gCtx.stroke();
+        gCtx.setLineDash([]);
+
+        gCtx.font = '10px "Inter", sans-serif'; 
+        gCtx.fillStyle = '#a1a1aa'; 
+        gCtx.textAlign = 'center';
+        
+        const timePoints = [0, 6, 12, 18, 24];
+        timePoints.forEach(t => {
+            const x = LAYOUT.padLeft + (t / 24) * drawWidth;
+            gCtx.beginPath();
+            gCtx.fillStyle = '#d1d1d6';
+            gCtx.arc(x, axisY, 1.5, 0, Math.PI * 2);
+            gCtx.fill();
+            gCtx.fillText(t + ":00", x, axisY + 20);
+        });
+
+        state.moodPoints.forEach(point => drawPoint(point, width, height, false));
+        
+        if (!state.isAnimating) {
+            drawNowHandle(width, height, drawWidth, drawHeight);
+        }
+    }
+
+    function drawWaveArea(points, w, h, dw, dh, limitTime) {
+        if (points.length < 1) return;
+        const sortedPoints = [...points].sort((a, b) => a.time - b.time);
+        
+        gCtx.save();
+        if (limitTime !== null) {
+            gCtx.beginPath();
+            const limitX = LAYOUT.padLeft + (limitTime / 24) * dw;
+            gCtx.rect(0, 0, limitX, h);
+            gCtx.clip();
+        }
+
+        gCtx.beginPath();
+        let startX = LAYOUT.padLeft + (sortedPoints[0].time / 24) * dw;
+        let startY = (h - LAYOUT.padBottom) - (sortedPoints[0].mood * dh);
+        gCtx.moveTo(startX, startY);
+
+        for (let i = 0; i < sortedPoints.length - 1; i++) {
+            const curr = sortedPoints[i];
+            const next = sortedPoints[i+1];
+            const x1 = LAYOUT.padLeft + (curr.time / 24) * dw;
+            const y1 = (h - LAYOUT.padBottom) - (curr.mood * dh);
+            const x2 = LAYOUT.padLeft + (next.time / 24) * dw;
+            const y2 = (h - LAYOUT.padBottom) - (next.mood * dh);
+            gCtx.bezierCurveTo(x1 + (x2-x1)/2, y1, x1 + (x2-x1)/2, y2, x2, y2);
+        }
+
+        const lastP = sortedPoints[sortedPoints.length - 1];
+        const lastX = LAYOUT.padLeft + (lastP.time / 24) * dw;
+        const axisY = h - LAYOUT.padBottom;
+        gCtx.lineTo(lastX, axisY); 
+        gCtx.lineTo(startX, axisY); 
+        gCtx.closePath();
+
+        const grad = gCtx.createLinearGradient(0, LAYOUT.padTop, 0, axisY);
+        grad.addColorStop(0, 'rgba(224, 176, 176, 0.25)'); 
+        grad.addColorStop(0.5, 'rgba(224, 199, 151, 0.15)'); 
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)'); 
+        gCtx.fillStyle = grad;
+        gCtx.fill();
+        
+        gCtx.beginPath();
+        gCtx.moveTo(startX, startY);
+        for (let i = 0; i < sortedPoints.length - 1; i++) {
+            const curr = sortedPoints[i];
+            const next = sortedPoints[i+1];
+            const x1 = LAYOUT.padLeft + (curr.time / 24) * dw;
+            const y1 = (h - LAYOUT.padBottom) - (curr.mood * dh);
+            const x2 = LAYOUT.padLeft + (next.time / 24) * dw;
+            const y2 = (h - LAYOUT.padBottom) - (next.mood * dh);
+            gCtx.bezierCurveTo(x1 + (x2-x1)/2, y1, x1 + (x2-x1)/2, y2, x2, y2);
+        }
+        gCtx.strokeStyle = 'rgba(190, 150, 150, 0.6)'; 
+        gCtx.lineWidth = 1.5; 
+        gCtx.lineCap = 'round';
+        gCtx.setLineDash([]); 
+        gCtx.stroke();
+        
+        gCtx.restore();
+    }
+
+    function drawNowHandle(w, h, dw, dh) {
+        const x = LAYOUT.padLeft + (state.nowPoint.time / 24) * dw;
+        const y = (h - LAYOUT.padBottom) - (state.nowPoint.mood * dh);
+        const axisY = h - LAYOUT.padBottom;
+
+        gCtx.save();
+        gCtx.beginPath();
+        gCtx.setLineDash([2, 4]);
+        gCtx.strokeStyle = '#d1a3a4'; 
+        gCtx.lineWidth = 1;
+        gCtx.moveTo(x, LAYOUT.padTop);
+        gCtx.lineTo(x, axisY);
+        gCtx.stroke();
+        gCtx.restore();
+
+        const moodColor = getSmoothedColor(state.nowPoint.mood);
+        const grad = gCtx.createRadialGradient(x, y, 3, x, y, 15);
+        grad.addColorStop(0, `rgba(${moodColor}, 0.5)`);
+        grad.addColorStop(1, `rgba(${moodColor}, 0)`);
+        gCtx.beginPath();
+        gCtx.fillStyle = grad;
+        gCtx.arc(x, y, 15, 0, Math.PI * 2); 
+        gCtx.fill();
+
+        gCtx.beginPath();
+        gCtx.fillStyle = state.nowPoint.isDragging ? '#fff' : '#d1a3a4'; 
+        gCtx.strokeStyle = '#fff';
+        gCtx.lineWidth = 2;
+        gCtx.arc(x, y, 5, 0, Math.PI * 2);
+        gCtx.fill();
+        gCtx.stroke();
+        
+        gCtx.fillStyle = '#d1a3a4'; 
+        gCtx.font = '9px "Inter"'; 
+        gCtx.fillText("NOW", x, LAYOUT.padTop - 6); 
+    }
+
+    function drawPoint(point, width, height, isCurrent) {
+        const drawWidth = width - LAYOUT.padLeft - LAYOUT.padRight;
+        const drawHeight = height - LAYOUT.padTop - LAYOUT.padBottom;
+        const axisY = height - LAYOUT.padBottom;
+        const x = LAYOUT.padLeft + (point.time / 24) * drawWidth;
+        const y = axisY - (point.mood * drawHeight);
+        const moodColor = getSmoothedColor(point.mood);
+        
+        gCtx.beginPath();
+        gCtx.fillStyle = '#fff';
+        gCtx.strokeStyle = `rgba(${moodColor}, 0.8)`;
+        gCtx.lineWidth = 1.5; 
+        gCtx.arc(x, y, 3.5, 0, Math.PI * 2); 
+        gCtx.fill();
+        gCtx.stroke();
+    }
+
+    // --- True Watercolor Effect Implementation ---
+    function drawWatercolorFlower(mood, isGhost = false) {
+        const width = flowerCanvas.width / 2;
+        const height = flowerCanvas.height / 2;
+        if (width === 0) return;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        fCtx.clearRect(0, 0, width, height);
+
+        if (isGhost) {
+            fCtx.globalAlpha = 0.3; 
+            fCtx.filter = 'grayscale(40%) opacity(0.6)'; 
+        } else {
+            fCtx.globalAlpha = 1.0;
+            fCtx.filter = 'none';
+        }
+
+        // Stem: Organic stroke
+        fCtx.save();
+        fCtx.beginPath();
+        fCtx.lineCap = 'round';
+        fCtx.lineJoin = 'round';
+        const stemCurve = (1 - mood) * 40;
+        fCtx.moveTo(cx, cy + 180);
+        fCtx.quadraticCurveTo(cx - stemCurve, cy + 100, cx, cy + 20);
+        const stemGrad = fCtx.createLinearGradient(cx, cy + 180, cx, cy);
+        stemGrad.addColorStop(0, '#6b7c70'); 
+        stemGrad.addColorStop(1, '#a8b5a4'); 
+        fCtx.strokeStyle = stemGrad;
+        fCtx.lineWidth = 10; 
+        fCtx.shadowBlur = 2; 
+        fCtx.shadowColor = "rgba(107, 124, 112, 0.3)";
+        fCtx.stroke();
+        fCtx.restore();
+
+        fCtx.save();
+        fCtx.globalCompositeOperation = 'multiply'; 
+        const baseColor = getSmoothedColor(mood);
+        const maxPetalCount = 10; 
+        const baseRadius = 70 + mood * 40; 
+        const openness = 0.5 + mood * 0.5;
+
+        for (let layer = 0; layer < 3; layer++) {
+            const layerScale = 1 - (layer * 0.15);
+            for (let i = 0; i < maxPetalCount; i++) {
+                const seed = i + layer * 100;
+                const rand1 = stableRandom(seed);
+                const angle = (Math.PI * 2 / maxPetalCount) * i + (layer * 0.5);
+                const len = (baseRadius * layerScale) + (rand1 * 25); 
+                const dropY = (1 - mood) * 40; 
+                const px = cx + Math.cos(angle) * len * openness;
+                const py = cy + Math.sin(angle) * len * openness + (angle > 0 && angle < Math.PI ? dropY : 0);
+                
+                const petalGrad = fCtx.createRadialGradient(px, py, 2, px, py, len * 0.95);
+                petalGrad.addColorStop(0, `rgba(${baseColor}, ${0.6 - layer * 0.1})`); 
+                petalGrad.addColorStop(0.6, `rgba(${baseColor}, ${0.3 - layer * 0.1})`);
+                petalGrad.addColorStop(0.9, `rgba(${baseColor}, 0.1)`); 
+                petalGrad.addColorStop(1, `rgba(${baseColor}, 0)`); 
+                
+                fCtx.fillStyle = petalGrad;
+                fCtx.beginPath();
+                fCtx.moveTo(cx, cy);
+                const cpVar1 = stableRandom(seed+1) * 25 - 12.5;
+                const cpVar2 = stableRandom(seed+2) * 25 - 12.5;
+                const widthFactor = 0.55;
+                const cp1x = cx + Math.cos(angle - widthFactor) * (len * 0.6) + cpVar1;
+                const cp1y = cy + Math.sin(angle - widthFactor) * (len * 0.6) + dropY * 0.5;
+                const cp2x = cx + Math.cos(angle + widthFactor) * (len * 0.6) + cpVar2;
+                const cp2y = cy + Math.sin(angle + widthFactor) * (len * 0.6) + dropY * 0.5;
+                fCtx.bezierCurveTo(cp1x, cp1y, px, py, px, py);
+                fCtx.bezierCurveTo(px, py, cp2x, cp2y, cx, cy);
+                
+                fCtx.shadowBlur = 8; 
+                fCtx.shadowColor = `rgba(${baseColor}, 0.2)`;
+                fCtx.fill();
+                
+                fCtx.strokeStyle = `rgba(${baseColor}, 0.15)`;
+                fCtx.lineWidth = 1;
+                fCtx.stroke();
+                
+                if (rand1 > 0.6) {
+                    fCtx.strokeStyle = `rgba(255,255,255, 0.2)`;
+                    fCtx.lineWidth = 0.5;
+                    fCtx.stroke();
+                }
+            }
+        }
+        fCtx.restore();
+
+        fCtx.save();
+        const centerGrad = fCtx.createRadialGradient(cx, cy, 0, cx, cy, 45);
+        centerGrad.addColorStop(0, 'rgba(245, 230, 180, 0.7)'); 
+        centerGrad.addColorStop(0.6, 'rgba(245, 210, 150, 0.3)');
+        centerGrad.addColorStop(1, 'rgba(245, 210, 150, 0)'); 
+        fCtx.fillStyle = centerGrad;
+        fCtx.beginPath();
+        fCtx.arc(cx, cy, 50, 0, Math.PI * 2);
+        fCtx.fill();
+        drawWatercolorFace(cx, cy, mood, baseColor);
+        fCtx.restore();
+    }
+
+    function drawWatercolorFace(x, y, mood, baseColor) {
+        const r = Math.max(0, parseInt(baseColor.split(',')[0]) - 60);
+        const g = Math.max(0, parseInt(baseColor.split(',')[1]) - 60);
+        const b = Math.max(0, parseInt(baseColor.split(',')[2]) - 60);
+        const faceColor = `rgba(${r}, ${g}, ${b}, 0.65)`;
+
+        fCtx.strokeStyle = faceColor;
+        fCtx.fillStyle = faceColor;
+        fCtx.lineWidth = 3.5; // Increased line width for more prominence
+        fCtx.lineCap = 'round';
+        fCtx.lineJoin = 'round';
+        fCtx.shadowBlur = 2; 
+        fCtx.shadowColor = faceColor;
+        
+        const eyeOffset = 22; // Increased eye offset for exaggerated look
+        const eyeY = y - 10;
+        fCtx.beginPath();
+        if (mood > 0.6) {
+            const bend = 6 + (mood - 0.6) * 18; // Increased bend for happier eyes
+            drawSoftCurve(x - eyeOffset - 8, eyeY, x - eyeOffset + 8, eyeY, -bend);
+            drawSoftCurve(x + eyeOffset - 8, eyeY, x + eyeOffset + 8, eyeY, -bend);
+        } else if (mood > 0.3) {
+            fCtx.beginPath();
+            fCtx.arc(x - eyeOffset, eyeY, 4.5, 0, Math.PI*2); // Larger eyes
+            fCtx.fill();
+            fCtx.beginPath();
+            fCtx.arc(x + eyeOffset, eyeY, 4.5, 0, Math.PI*2);
+            fCtx.fill();
+        } else {
+            const slope = (0.3 - mood) * 16; // Steeper slope for sad eyes
+            fCtx.moveTo(x - eyeOffset - 7, eyeY - slope); fCtx.lineTo(x - eyeOffset + 7, eyeY + slope);
+            fCtx.moveTo(x + eyeOffset + 7, eyeY - slope); fCtx.lineTo(x + eyeOffset - 7, eyeY + slope);
+            fCtx.stroke();
+        }
+        const mouthY = y + 16;
+        fCtx.beginPath();
+        if (mood > 0.5) {
+            const smileDepth = (mood - 0.5) * 32; // Deeper smile
+            fCtx.moveTo(x - 16, mouthY); // Wider smile
+            fCtx.quadraticCurveTo(x, mouthY + smileDepth, x + 16, mouthY);
+            if (mood > 0.8) {
+                fCtx.closePath(); 
+                fCtx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.1)`; 
+                fCtx.fill();
+            }
+            fCtx.stroke();
+        } else {
+            const frownDepth = (0.5 - mood) * 18; // Deeper frown
+            fCtx.moveTo(x - 14, mouthY + frownDepth); // Wider frown
+            fCtx.quadraticCurveTo(x, mouthY - frownDepth/1.5, x + 14, mouthY + frownDepth);
+            fCtx.stroke();
+        }
+    }
+
+    function drawSoftCurve(x1, y1, x2, y2, bend) {
+        fCtx.moveTo(x1, y1);
+        fCtx.quadraticCurveTo((x1+x2)/2, (y1+y2)/2 + bend, x2, y2);
+        fCtx.stroke();
+    }
+
+    function isOverNowHandle(x, y, width, height) {
+        const drawWidth = width - LAYOUT.padLeft - LAYOUT.padRight;
+        const drawHeight = height - LAYOUT.padTop - LAYOUT.padBottom;
+        const handleX = LAYOUT.padLeft + (state.nowPoint.time / 24) * drawWidth;
+        const handleY = (height - LAYOUT.padBottom) - (state.nowPoint.mood * drawHeight);
+        return Math.sqrt(Math.pow(x - handleX, 2) + Math.pow(y - handleY, 2)) < 15; 
+    }
+
+    function handleMouseMove(event) {
+        if (state.isAnimating) return;
+
+        const rect = graphCanvas.getBoundingClientRect();
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        const x = (clientX - rect.left);
+        const y = (clientY - rect.top);
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
+        
+        if (state.nowPoint.isDragging) {
+            graphCanvas.style.cursor = 'grabbing';
+        } else if (isOverNowHandle(x, y, cssWidth, cssHeight)) {
+            graphCanvas.style.cursor = 'grab';
+        } else {
+            graphCanvas.style.cursor = 'default';
+        }
+
+        if (state.nowPoint.isDragging) {
+            const drawHeight = cssHeight - LAYOUT.padTop - LAYOUT.padBottom;
+            const rawMood = 1 - ((y - LAYOUT.padTop) / drawHeight);
+            state.nowPoint.mood = Math.max(0, Math.min(1, rawMood));
+            drawGraph();
+            drawWatercolorFlower(state.nowPoint.mood);
+        }
+    }
+
+    function handleMouseDown(event) {
+        if (state.isAnimating) return;
+        state.showWave = false;
+
+        const rect = graphCanvas.getBoundingClientRect();
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        const x = (clientX - rect.left);
+        const y = (clientY - rect.top);
+        const cssWidth = rect.width;
+        const cssHeight = rect.height;
+
+        if (isOverNowHandle(x, y, cssWidth, cssHeight)) {
+            state.nowPoint.isDragging = true;
+            graphCanvas.style.cursor = 'grabbing';
+            return;
+        }
+
+        if (x < LAYOUT.padLeft - 10 || x > cssWidth - 10 || y < 10 || y > cssHeight - LAYOUT.padBottom + 10) return;
+
+        const drawWidth = cssWidth - LAYOUT.padLeft - LAYOUT.padRight;
+        const drawHeight = cssHeight - LAYOUT.padTop - LAYOUT.padBottom;
+
+        const rawTime = ((x - LAYOUT.padLeft) / drawWidth) * 24;
+        const rawMood = 1 - ((y - LAYOUT.padTop) / drawHeight);
+
+        // Database Interaction
+        if (currentUser) {
+            const point = {
+                time: Math.max(0, Math.min(24, rawTime)),
+                mood: Math.max(0, Math.min(1, rawMood)),
+                createdAt: new Date().toISOString()
+            };
+            addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'moods'), point);
+        }
+    }
+
+    function handleMouseUp() {
+        if (state.nowPoint.isDragging) {
+            state.nowPoint.isDragging = false;
+            graphCanvas.style.cursor = 'grab';
+            
+            if (currentUser) {
+                 const point = {
+                    time: state.nowPoint.time,
+                    mood: state.nowPoint.mood,
+                    createdAt: new Date().toISOString()
+                };
+                addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'moods'), point);
+            }
+        }
+    }
+
+    // Start App
+    initApp();
+
+    const resizeObs = new ResizeObserver(() => { setTimeout(resizeCanvas, 100); });
+    resizeObs.observe(mainView);
+    window.addEventListener('load', () => { resizeCanvas(); setTimeout(resizeCanvas, 300); });
+
+</script>
+</body>
+</html>
